@@ -469,4 +469,10 @@ function loop() {
   
   
   context.fillText(score, 700, 50);
+
+  if(!me.isAlive)
+  {
+    context.font = "bold 30pt 'Open Sans'";
+    context.fillText("u ded", 10, 60);
+  }
 }
