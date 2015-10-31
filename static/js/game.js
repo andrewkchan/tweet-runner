@@ -7,6 +7,8 @@ var trojans = [];
 var me;
 var KeyBulletin;
 
+var score = 0;
+
 var acorn_image;
 var retweet_image;
 
@@ -411,6 +413,11 @@ function loop() {
     }
   }
   me.update(25);
+
+  if(me.isAlive)
+  {
+    score += 1;
+  }
  
  
   //draw canvas background
@@ -461,5 +468,5 @@ function loop() {
   }
   
   
-
+  context.fillText(score, 700, 50);
 }
