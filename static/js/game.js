@@ -15,8 +15,9 @@ var retweet_image;
 var UP = 38;
 var CANVAS_WIDTH = 0;
 var CANVAS_HEIGHT = 0;
-var GRAVITY = 400;
-var GROUNDSPEED = -30;
+var GRAVITY = 900;
+var GROUNDSPEED = -150;
+var JUMPSPEED = -550;
 
 
 var lastTweetAuthor;
@@ -25,7 +26,8 @@ var lastTweetFavorites = 0;
 var lastTweetRetweets = 0;
 var lastTweets = [];
 var tweetTimeRemaining = 0;
-var DEFAULT_TWEET_TIME = 2000; //MILLISECONDS before fade-out
+var DEFAULT_TWEET_TIME = 1500; //MILLISECONDS before fade-out
+
  
  
 $(document).ready(function() {
@@ -80,11 +82,11 @@ var Decoration = function(img) {
   this.velocity = 0.0;
 }
 Decoration.prototype.update = function(dt) {
-  if(this.x < -10)
+  if(this.x < -this.image.width || this.x > CANVAS_WIDTH * 2)
   {
     this.isAlive = false;
   }
-  this.x += GROUNDSPEED * (dt/200);
+  this.x += GROUNDSPEED * (dt/1000);
   this.x += this.velocity * (dt/1000);
 }
 // ENEMY CLASS ------------------------------------------------
@@ -111,12 +113,12 @@ Enemy.prototype.isOnGround = function() {
 }
  
 Enemy.prototype.update = function(dt) {
-  if (this.x < -10) {
+  if (this.x < -this.image.width) {
     this.isAlive = false;
   }
   this.keepOnGround();
   if (this.isOnGround()) {
-    this.x += GROUNDSPEED * (dt/200);
+    this.x += GROUNDSPEED * (dt/1000);
     this.x += this.velocity * (dt/1000);
   }
 }
@@ -144,12 +146,12 @@ Trojan.prototype.isOnGround = function() {
 }
  
 Trojan.prototype.update = function(dt) {
-  if (this.x < -10) {
+  if (this.x < -this.image.width) {
     this.isAlive = false;
   }
   this.keepOnGround();
   if (this.isOnGround()) {
-    this.x += GROUNDSPEED * (dt/200);
+    this.x += GROUNDSPEED * (dt/1000);
   }
   if(this.isAlive)
   {
@@ -177,7 +179,7 @@ Bullet.prototype.update = function(dt) {
   if (this.x < -10) {
     this.isAlive = false;
   }
-  this.x += GROUNDSPEED * (dt/200);
+  this.x += GROUNDSPEED * (dt/1000);
   this.x += this.velocityX * (dt/800);
   
 }
@@ -199,10 +201,12 @@ var Player = function() {
   this.velocity = 0;
   this.lives = 4;
  
-  this.jumpSpeed = -300;
+  this.jumpSpeed = JUMPSPEED;
   this.width = 60;//this.image.width;
   this.height = 35;//this.image.height;
   this.y = CANVAS_HEIGHT - this.height;
+
+  this.invincibility_time = DEFAULT_TWEET_TIME;
 }
  
 Player.prototype.keepOnGround = function() {
@@ -223,6 +227,18 @@ Player.prototype.isHittingEnemies = function(enemy) {
     // return ((this.y > CANVAS_HEIGHT - enemy.height) && ((enemy.x < right_x) || (enemy.x > left_x)));
     return !((enemy.x > 30 + this.width || 30 > enemy.x + enemy.width || enemy.y > this.y + this.height || this.y > enemy.y + enemy.height));
 }
+
+Player.prototype.die = function() {
+  if (this.lives == 0) {
+    this.isAlive = false;
+    GROUNDSPEED = 0.0;
+  }
+  else {
+    this.lives -= 1
+    this.y = 0;
+    this.invincibility_time = DEFAULT_TWEET_TIME;
+  }
+}
  
 Player.prototype.update = function(dt) {
   if (!this.isAlive) {
@@ -233,45 +249,31 @@ Player.prototype.update = function(dt) {
   }
  
   this.image = this.currentAnim.getCurrentFrame();
-  this.currentAnim.update(25);
+  this.currentAnim.update(dt);
   this.y += this.velocity * (dt/1000);
   this.keepOnGround();
- 
-  for (i = 0; i < enemies.length; i++) {
-    if (this.isHittingEnemies(enemies[i])) {
-      if (this.lives == 0) {
-        this.isAlive = false;
-        GROUNDSPEED = 0.0;
+  
+  if(this.invincibility_time <= 0.0)
+  {
+    for (i = 0; i < enemies.length; i++) {
+      if (this.isHittingEnemies(enemies[i])) {
+        this.die();
       }
-      else {
-        this.lives -= 1
-        this.y = 0;
+    }
+    for (i = 0; i < trojans.length; i++) {
+      if (this.isHittingEnemies(trojans[i])) {
+        this.die();
+      }
+    }
+    for (i = 0; i < bullets.length; i++) {
+      if (this.isHittingEnemies(bullets[i])) {
+        this.die();
       }
     }
   }
-  for (i = 0; i < trojans.length; i++) {
-    if (this.isHittingEnemies(trojans[i])) {
-      if (this.lives == 0) {
-        this.isAlive = false;
-        GROUNDSPEED = 0.0;
-      }
-      else {
-        this.lives -= 1
-        this.y = 0;
-      }
-    }
-  }
-  for (i = 0; i < bullets.length; i++) {
-    if (this.isHittingEnemies(bullets[i])) {
-      if (this.lives == 0) {
-        this.isAlive = false;
-        GROUNDSPEED = 0.0;
-      }
-      else {
-        this.lives -= 1
-        this.y = 0;
-      }
-    }
+  else
+  {
+    this.invincibility_time -= dt;
   }
 }
  
@@ -305,7 +307,7 @@ function readFeed(data, textStatus, jqXHR)
     for(i = 0; i < tweets.length; i++)
     {
         lastTweets.push(tweets[i]);
-        console.log(lastTweets[lastTweets.length - 1].name);
+        //console.log(lastTweets[lastTweets.length - 1].name);
     }
 }
  
@@ -334,6 +336,7 @@ function loop() {
   if(lastTweets.length > 0 && tweetTimeRemaining <= 0)
   {
     var last = lastTweets.splice(0, 1)[0];
+    var lastTweetKeyword = last.keyword;
     lastTweetText = last.text;
     lastTweetAuthor = last.name;
     lastTweetFavorites = last.favorites;
@@ -344,30 +347,33 @@ function loop() {
     }
     tweetTimeRemaining = DEFAULT_TWEET_TIME;
 
-    if(lastTweetText.indexOf("stanford") > -1 || lastTweetText.indexOf("Stanford") > -1)
+    if(me.isAlive)
     {
-      enemies.push(new Enemy(".enemy1"));
-    }
-    else if(lastTweetText.indexOf("lawnmower") > -1 || lastTweetText.indexOf("Lawnmower") > -1)
-    {
-      enemies.push(new Enemy(".lawnmower"));
-      enemies[enemies.length - 1].velocity = -100;
-    }
-    else if (lastTweetText.indexOf("midterm") > -1)
-    {
-      enemies.push(new Enemy(".failure"));
-    }
-    else if (lastTweetText.indexOf("fox news") > -1)
-    {
-      enemies.push(new Enemy(".foxnews"));
-    }
-    else if (lastTweetText.indexOf("usc") > -1 || lastTweetText.indexOf("USC") > -1)
-    {
-      trojans.push(new Trojan());
-    }
-    else if (lastTweetText.indexOf("acorn") > -1 || lastTweetText.indexOf("Acorn") > -1)
-    {
-      me.lives += 1;
+      if(lastTweetKeyword == "stanford")
+      {
+        enemies.push(new Enemy(".enemy1"));
+      }
+      else if(lastTweetKeyword == "lawnmower")
+      {
+        enemies.push(new Enemy(".lawnmower"));
+        enemies[enemies.length - 1].velocity = -100;
+      }
+      else if (lastTweetKeyword == "midterm")
+      {
+        enemies.push(new Enemy(".failure"));
+      }
+      else if (lastTweetKeyword == "fox news")
+      {
+        enemies.push(new Enemy(".foxnews"));
+      }
+      else if (lastTweetKeyword == "usc")
+      {
+        trojans.push(new Trojan());
+      }
+      else if (lastTweetKeyword == "acorn")
+      {
+        me.lives += 1;
+      }
     }
   }
     //------------------------------------------------
@@ -384,7 +390,7 @@ function loop() {
     decorations[i].update(25);
   }
   for (i = 0; i < decorations.length; i++) {
-    if (!(decorations[0].isAlive)) {
+    if (!(decorations[i].isAlive)) {
       decorations.splice(i, 1);
     }
   }
@@ -392,7 +398,7 @@ function loop() {
     enemies[i].update(25);
     }
   for (i = 0; i < enemies.length; i++) {
-    if (!(enemies[0].isAlive)) {
+    if (!(enemies[i].isAlive)) {
       enemies.splice(i, 1);
     }
   }
@@ -400,7 +406,7 @@ function loop() {
     trojans[i].update(25);
     }
   for (i = 0; i < trojans.length; i++) {
-    if (!(trojans[0].isAlive)) {
+    if (!(trojans[i].isAlive)) {
       trojans.splice(i, 1);
     }
   }
@@ -408,7 +414,7 @@ function loop() {
     bullets[i].update(25);
     }
   for (i = 0; i < bullets.length; i++) {
-    if (!(bullets[0].isAlive)) {
+    if (!(bullets[i].isAlive)) {
       bullets.splice(i, 1);
     }
   }
@@ -455,7 +461,17 @@ function loop() {
     context.drawImage(acorn_image, (i * 35), 10);
   }
   //display player
-  context.drawImage(me.image, 30, me.y);
+  if(me.invincibility_time > 0.0)
+  {
+    context.globalAlpha = Math.random();
+    context.drawImage(me.image, 30, me.y);
+    context.globalAlpha = 1.0;
+  }
+  else
+  {
+    context.drawImage(me.image, 30, me.y);
+  }
+  
   //display enemies
   for (i = 0; i < enemies.length; i++) {
     context.drawImage(enemies[i].image, enemies[i].x, enemies[i].y);

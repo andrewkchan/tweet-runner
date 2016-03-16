@@ -58,8 +58,9 @@ def process(data):
     if not keyword or data['user']['lang'] != 'en' or last[0] == data['text']:
         return
     last[0] = data['text']
-    json_cache.append({'name': data['user']['screen_name'],
-        'text': data['text'], 'url': 'https://twitter.com/statuses/' + str(data['id']), 'time': data['created_at'], 'favorites': data['favorite_count'], 'retweets': data['retweet_count']})
+    json_cache.append({'name': data['user']['screen_name'], 'text': data['text'], 
+        'url': 'https://twitter.com/statuses/' + str(data['id']), 'time': data['created_at'], 
+        'favorites': data['favorite_count'], 'retweets': data['retweet_count'], 'keyword': keyword})
     print(json_cache[0]['time'])
     print('@%s: %s' % (data['user']['screen_name'], data['text'].encode('ascii', 'ignore')))
    
