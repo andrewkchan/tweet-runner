@@ -279,6 +279,32 @@ Player.prototype.update = function(dt) {
  
 //MAIN BODY----------------------
 function main() {
+  console.log("main loaded");
+  //var socket = io.connect("http://" + document.domain + ":" + location.port + "/test");
+  var socket = io.connect();
+  console.log("starting websocket connection");
+
+  //send an explicit package to the server upon connection
+  socket.on("connect",
+    function(){
+      console.log("Connection to WebSocket server being established")
+    }
+  );
+
+  //log data on any server response
+  socket.on("my response",
+    function(msg){
+      console.log("Received:" + msg.data);
+    }
+  );
+
+  socket.on('new_tweet', 
+    function(msg){
+      console.log("new tweet from WebSocket server received!");
+      processTweet(msg);
+    }
+  );
+
   canvas = $(".animationCanvas").get(0);
   context = canvas.getContext("2d");
 
@@ -297,6 +323,49 @@ function main() {
  
 }
 
+function processTweet(data)
+{
+  lastTweetText = data.text;
+  lastTweetAuthor = data.name;
+  lastTweetFavorites = data.favorites;
+  lastTweetRetweets = data.retweets;
+
+  if(lastTweetText.length > 80)
+  {
+      lastTweetText = lastTweetText.slice(0, 70) + "\n" + lastTweetText.slice(70, lastTweetText.length);
+  }
+  tweetTimeRemaining = DEFAULT_TWEET_TIME;
+
+  if(me.isAlive)
+  {
+    if(data.keyword == "stanford")
+    {
+      enemies.push(new Enemy(".enemy1"));
+    }
+    else if(data.keyword == "lawnmower")
+    {
+      enemies.push(new Enemy(".lawnmower"));
+      enemies[enemies.length - 1].velocity = -100;
+    }
+    else if (data.keyword == "midterm")
+    {
+      enemies.push(new Enemy(".failure"));
+    }
+    else if (data.keyword == "fox news")
+    {
+      enemies.push(new Enemy(".foxnews"));
+    }
+    else if (data.keyword == "usc")
+    {
+      trojans.push(new Trojan());
+    }
+    else if (data.keyword == "acorn")
+    {
+      me.lives += 1;
+    }
+  }
+}
+/*
 function readFeed(data, textStatus, jqXHR)
 {
     //alert("success!");
@@ -310,7 +379,7 @@ function readFeed(data, textStatus, jqXHR)
         //console.log(lastTweets[lastTweets.length - 1].name);
     }
 }
- 
+*/
  
 function loop() {
   //get user input, update objects, display all graphics
@@ -324,7 +393,7 @@ function loop() {
 
   //-------------------READ TWEETS, update enemies------------------
     //$.getJSON("/query-tweet-stream", readFeed);
-    
+  /*
     $.ajax({
             type: "GET",
             url: "../request/",
@@ -332,6 +401,7 @@ function loop() {
             //data: { "echoValue": "echoText" },
             success: readFeed
         }); 
+  
 
   if(lastTweets.length > 0 && tweetTimeRemaining <= 0)
   {
@@ -376,6 +446,7 @@ function loop() {
       }
     }
   }
+  */
     //------------------------------------------------
  
   if (Math.random() < 0.008) {
@@ -436,9 +507,6 @@ function loop() {
   {
     var dispAlpha = (tweetTimeRemaining/DEFAULT_TWEET_TIME);
     context.globalAlpha = dispAlpha;
-    //console.log("aaaaaaaaaaaaaaaaaaaaaaaa");
-    
-    //context.fillStyle = "rgba(255, 255, 255, " + (tweetTimeRemaining/DEFAULT_TWEET_TIME) + ")";
     tweetTimeRemaining -= 25;
 
     context.font = "bold 11pt 'Open Sans'";
