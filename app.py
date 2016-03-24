@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask.ext.socketio import SocketIO, emit
 
 import tweepy
@@ -8,6 +8,7 @@ import threading
 import random
 
 app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = 'uploaded_assets'
 
 socketio = SocketIO(app)
  
@@ -33,6 +34,14 @@ last = ['']
 
 keywords = ['berkeley', 'stanford', 'midterm', 'acorn', 'lawnmower', 'fox news', 'usc']
 
+entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png'}, 
+            'midterm': {'type': 'enemy', 'imageURL': 'failure.png'}, 
+            'acorn': {'type': 'pickup', 'imageURL': 'acorn.png'}, 
+            'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png'}, 
+            'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png'}, 
+            'usc': {'type': 'enemy', 'imageURL': 'trojan.png'}}
+
+
 #Routes----------------------------------------------------
 
 @app.route("/")
@@ -40,20 +49,9 @@ def index():
     #return get_tweets()
     return render_template("index.html")
 
-@app.route("/query-tweet-stream")
-def get():
-    tweets = {'tweets': json_cache.copy()}
-    json_cache.clear()
-    return json.dumps(tweets)
-
-@app.route('/request/', methods=['GET'])
-def echo():
-    #ret_data = {"value": request.args.get('echoValue')}
-    return get()
- 
-#@app.route("/your/webservice")
-#def my_webservice():
-#    return jsonify(result=some_function(**request.args))
+@app.route("/images/<filename>")
+def get_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 #------------------------------------------------------------
 #Websocket messages------------------------------------------
@@ -66,13 +64,22 @@ def test_message(message):
 def test_message(message):
     emit('my response', {'data': message['data']}, broadcast=True)
 
-@socketio.on('connect', namespace='/test')
+@socketio.on('connect')
 def test_connect():
-    emit('my response', {'data': 'Connected'})
+    print("CLIENT CONNECTED")
+    emit('transmit_entities', entities)
 
-@socketio.on('disconnect', namespace='/test')
+@socketio.on("version_verification")
+def print_client_version(message):
+    print("client version:" + message["version"])
+
+@socketio.on('disconnect')
 def test_disconnect():
-    print('Client disconnected')
+    print('CLIENT DISCONNECTED')
+
+@socketio.on("entites_received")
+def entities_received():
+    print("CLIENT RECEIVED ENTITIES")
 
 #------------------------------------------------------------
  

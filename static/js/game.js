@@ -1,3 +1,4 @@
+
 var canvas;
 var context;
 var enemies = [];
@@ -27,6 +28,11 @@ var lastTweetRetweets = 0;
 var lastTweets = [];
 var tweetTimeRemaining = 0;
 var DEFAULT_TWEET_TIME = 1500; //MILLISECONDS before fade-out
+
+var entities;
+var numEntitiesLoading = 0;
+
+var lastTime;
 
  
  
@@ -287,26 +293,32 @@ function main() {
   //send an explicit package to the server upon connection
   socket.on("connect",
     function(){
-      console.log("Connection to WebSocket server being established")
+      console.log("Connection to WebSocket server being established");
+      socket.emit("version_verification", {version: "103"});
     }
   );
 
-  //log data on any server response
-  socket.on("my response",
+  
+  
+  //receive entity list
+  socket.on("transmit_entities",
     function(msg){
-      console.log("Received:" + msg.data);
+      getEntities(msg);
+      socket.emit("entities_received");
     }
   );
-
+  
   socket.on('new_tweet', 
     function(msg){
-      console.log("new tweet from WebSocket server received!");
+      //console.log("new tweet from WebSocket server received!");
       processTweet(msg);
     }
   );
 
+
   canvas = $(".animationCanvas").get(0);
   context = canvas.getContext("2d");
+  $(".animationCanvas").hide();
 
   CANVAS_WIDTH = 800;//canvas.width;
   CANVAS_HEIGHT = 400;//canvas.height;
@@ -319,8 +331,50 @@ function main() {
 
   window.addEventListener('keyup', function(event) {KeyBulletin.onKeyUp(event);}, false);
   window.addEventListener('keydown', function(event) {KeyBulletin.onKeyDown(event);}, false);
+
   setInterval(loop, 25);
- 
+
+}
+
+function loop()
+{
+  var currentTime = Date.now();
+  var elapsedTime = currentTime - lastTime;
+  lastTime = currentTime;
+  //console.log("loop running");
+  if(numEntitiesLoading <= 0)
+  {
+    if(numEntitiesLoading == 0)
+    {
+      console.log("game start");
+      numEntitiesLoading = -1;
+      $(".spinner").fadeOut(500, function(){
+        $(".spinner").remove();
+        $("canvas").fadeIn(500);
+      });
+    }
+    runGame(elapsedTime);
+  }
+}
+
+function getEntities(data)
+{
+  entities = data;
+  for(var keyword in entities)
+  {
+    if(entities.hasOwnProperty(keyword))
+    {
+      numEntitiesLoading++;
+      entities[keyword].image = new Image();
+      console.log("Downloading image:" + entities[keyword].imageURL);
+      entities[keyword].image.onload = function()
+      {
+        numEntitiesLoading--;
+        console.log("Number of downloads left:" + numEntitiesLoading);
+      }
+      entities[keyword].image.src = "../images/" + entities[keyword].imageURL;
+    }
+  }
 }
 
 function processTweet(data)
@@ -365,23 +419,8 @@ function processTweet(data)
     }
   }
 }
-/*
-function readFeed(data, textStatus, jqXHR)
-{
-    //alert("success!");
-    //data is a JSON formatted string with the format {"tweets":[list of tweets]}
-    //each tweet has elements "name", "user", "url", "text", "retweets", "favorites"
-    var usableData = JSON.parse(data);
-    var tweets = usableData.tweets;
-    for(i = 0; i < tweets.length; i++)
-    {
-        lastTweets.push(tweets[i]);
-        //console.log(lastTweets[lastTweets.length - 1].name);
-    }
-}
-*/
  
-function loop() {
+function runGame(dt) {
   //get user input, update objects, display all graphics
   if (me.isAlive) {
     if (KeyBulletin.isPressed(UP)) {
@@ -390,64 +429,6 @@ function loop() {
       }
     }
   }
-
-  //-------------------READ TWEETS, update enemies------------------
-    //$.getJSON("/query-tweet-stream", readFeed);
-  /*
-    $.ajax({
-            type: "GET",
-            url: "../request/",
-            //contentType: "application/json; charset=utf-8",
-            //data: { "echoValue": "echoText" },
-            success: readFeed
-        }); 
-  
-
-  if(lastTweets.length > 0 && tweetTimeRemaining <= 0)
-  {
-    var last = lastTweets.splice(0, 1)[0];
-    var lastTweetKeyword = last.keyword;
-    lastTweetText = last.text;
-    lastTweetAuthor = last.name;
-    lastTweetFavorites = last.favorites;
-    lastTweetRetweets = last.retweets;
-    if(lastTweetText.length > 80)
-    {
-        lastTweetText = lastTweetText.slice(0, 70) + "\n" + lastTweetText.slice(70, lastTweetText.length);
-    }
-    tweetTimeRemaining = DEFAULT_TWEET_TIME;
-
-    if(me.isAlive)
-    {
-      if(lastTweetKeyword == "stanford")
-      {
-        enemies.push(new Enemy(".enemy1"));
-      }
-      else if(lastTweetKeyword == "lawnmower")
-      {
-        enemies.push(new Enemy(".lawnmower"));
-        enemies[enemies.length - 1].velocity = -100;
-      }
-      else if (lastTweetKeyword == "midterm")
-      {
-        enemies.push(new Enemy(".failure"));
-      }
-      else if (lastTweetKeyword == "fox news")
-      {
-        enemies.push(new Enemy(".foxnews"));
-      }
-      else if (lastTweetKeyword == "usc")
-      {
-        trojans.push(new Trojan());
-      }
-      else if (lastTweetKeyword == "acorn")
-      {
-        me.lives += 1;
-      }
-    }
-  }
-  */
-    //------------------------------------------------
  
   if (Math.random() < 0.008) {
     decorations.push(new Decoration(".background_tree"));
@@ -458,7 +439,7 @@ function loop() {
     decorations[decorations.length - 1].y -= 60.0 - 40.0 * (Math.random());
   }
   for(i = 0; i < decorations.length; i++) {
-    decorations[i].update(25);
+    decorations[i].update(dt);
   }
   for (i = 0; i < decorations.length; i++) {
     if (!(decorations[i].isAlive)) {
@@ -466,7 +447,7 @@ function loop() {
     }
   }
   for (i = 0; i < enemies.length; i++) {
-    enemies[i].update(25);
+    enemies[i].update(dt);
     }
   for (i = 0; i < enemies.length; i++) {
     if (!(enemies[i].isAlive)) {
@@ -474,7 +455,7 @@ function loop() {
     }
   }
   for (i = 0; i < trojans.length; i++) {
-    trojans[i].update(25);
+    trojans[i].update(dt);
     }
   for (i = 0; i < trojans.length; i++) {
     if (!(trojans[i].isAlive)) {
@@ -482,14 +463,14 @@ function loop() {
     }
   }
   for (i = 0; i < bullets.length; i++) {
-    bullets[i].update(25);
+    bullets[i].update(dt);
     }
   for (i = 0; i < bullets.length; i++) {
     if (!(bullets[i].isAlive)) {
       bullets.splice(i, 1);
     }
   }
-  me.update(25);
+  me.update(dt);
 
   if(me.isAlive)
   {
@@ -498,7 +479,7 @@ function loop() {
  
  
   //draw canvas background
-  context.fillStyle = "#000000";
+  context.fillStyle = "#1ABC9C";
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   context.fillStyle = "#FFFFFF";
@@ -507,7 +488,7 @@ function loop() {
   {
     var dispAlpha = (tweetTimeRemaining/DEFAULT_TWEET_TIME);
     context.globalAlpha = dispAlpha;
-    tweetTimeRemaining -= 25;
+    tweetTimeRemaining -= dt;
 
     context.font = "bold 11pt 'Open Sans'";
     context.fillText(lastTweetAuthor, 100, 80);
