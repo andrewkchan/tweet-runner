@@ -258,8 +258,6 @@ function main() {
       socket.emit("version_verification", {version: SCRIPT_VERSION});
     }
   );
-
-  
   
   //receive entity list
   socket.on("transmit_entities",
