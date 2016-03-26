@@ -32,14 +32,13 @@ api = tweepy.API(auth)
 json_cache = []
 last = ['']
 
-keywords = ['berkeley', 'stanford', 'midterm', 'acorn', 'lawnmower', 'fox news', 'usc']
+keywords = ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc']
 
-entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png'}, 
-            'midterm': {'type': 'enemy', 'imageURL': 'failure.png'}, 
-            'acorn': {'type': 'pickup', 'imageURL': 'acorn.png'}, 
-            'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png'}, 
-            'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png'}, 
-            'usc': {'type': 'enemy', 'imageURL': 'trojan.png'}}
+entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
+            'midterm': {'type': 'enemy', 'imageURL': 'failure.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'},  
+            'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png', 'velocity': '-100', 'gravity': 'no', 'startingHeight': '0'}, 
+            'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
+            'usc': {'type': 'enemy', 'imageURL': 'trojan.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}}
 
 
 #Routes----------------------------------------------------

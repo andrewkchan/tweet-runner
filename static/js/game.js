@@ -1,10 +1,9 @@
+var SCRIPT_VERSION = "105";
 
 var canvas;
 var context;
 var enemies = [];
 var decorations = [];
-var bullets = [];
-var trojans = [];
 var me;
 var KeyBulletin;
 
@@ -30,7 +29,9 @@ var tweetTimeRemaining = 0;
 var DEFAULT_TWEET_TIME = 1500; //MILLISECONDS before fade-out
 
 var entities;
-var numEntitiesLoading = 0;
+var numEntitiesToLoad = 0;
+var numEntitiesLoaded = 0;
+var gameRunning = false;
 
 var lastTime;
 
@@ -71,11 +72,13 @@ var Animation = function(duration, list_image_names) {
 }
  
 Animation.prototype.update = function(dt) {
+  //console.log("Animation updated with dt:" + dt + " Animation time before update:" + this.currentTime);
   this.currentTime += dt;
   this.currentTime %= this.duration;
 }
  
 Animation.prototype.getCurrentFrame = function() {
+  //console.log("Animation time:" + this.currentTime + " Animation frame:" + Math.floor(this.currentTime/this.duration * this.list_frames.length) + " num frames:" + this.list_frames.length);
   return this.list_frames[Math.floor(this.currentTime/this.duration * this.list_frames.length)];
 }
  
@@ -103,7 +106,9 @@ var Enemy = function(img) {
   this.width = this.image.width;
   this.height = this.image.height;
   this.velocity = 0;
+  this.velocityY = 0;
   this.isAlive = true;
+  this.isGravityAffected = false;
 }
  
 Enemy.prototype.keepOnGround = function() {
@@ -127,69 +132,26 @@ Enemy.prototype.update = function(dt) {
     this.x += GROUNDSPEED * (dt/1000);
     this.x += this.velocity * (dt/1000);
   }
-}
-//TROJAN CLASS-----------------------------------------
-var Trojan = function() {
-  this.image = $(".trojan").get(0);
-  this.x = CANVAS_WIDTH;
-  this.y = CANVAS_HEIGHT;
-  this.width = this.image.width;
-  this.height = this.image.height;
-  this.velocity = 0;
-  this.isAlive = true;
-}
- 
-Trojan.prototype.keepOnGround = function() {
-  //asserts that player is on screen
-  if (this.y + this.height >= CANVAS_HEIGHT)
-  {
-    this.y = CANVAS_HEIGHT - this.height;
-  }
-}
- 
-Trojan.prototype.isOnGround = function() {
-  return (this.height + this.y) == CANVAS_HEIGHT;
-}
- 
-Trojan.prototype.update = function(dt) {
-  if (this.x < -this.image.width) {
-    this.isAlive = false;
-  }
-  this.keepOnGround();
-  if (this.isOnGround()) {
-    this.x += GROUNDSPEED * (dt/1000);
-  }
-  if(this.isAlive)
-  {
-    if(Math.random() < 0.005)
+  else {
+    if(this.isGravityAffected)
     {
-      this.fire();
+      this.velocityY += GRAVITY * (dt/1000);
+      this.y += this.velocityY * (dt/1000);
     }
   }
 }
-Trojan.prototype.fire = function() {
-  bullets.push(new Bullet(this.x, this.y + 10));
-}
-//BULLET CLASS -------------------------------
-var Bullet = function(x,y) {
-  this.image = $(".bullet").get(0);
-  this.x = x;
-  this.y = y;
-  this.width = this.image.width;
-  this.height = this.image.height;
-  this.velocityX = -300;
-  this.isAlive = true;
-}
- 
-Bullet.prototype.update = function(dt) {
-  if (this.x < -10) {
-    this.isAlive = false;
-  }
-  this.x += GROUNDSPEED * (dt/1000);
-  this.x += this.velocityX * (dt/800);
-  
-}
 
+Enemy.prototype.clone = function() {
+  var output = new Enemy(this.image);
+  output.x = this.x;
+  output.y = this.y;
+  output.width = this.width;
+  output.height = this.height;
+  output.velocity = this.velocity;
+  output.velocityY = this.velocityY;
+  output.isGravityAffected = this.isGravityAffected;
+  return output;
+}
  
 //ACORN CLASS -------------------------------------
 // var Acorn = function() {
@@ -266,21 +228,20 @@ Player.prototype.update = function(dt) {
         this.die();
       }
     }
-    for (i = 0; i < trojans.length; i++) {
-      if (this.isHittingEnemies(trojans[i])) {
-        this.die();
-      }
-    }
-    for (i = 0; i < bullets.length; i++) {
-      if (this.isHittingEnemies(bullets[i])) {
-        this.die();
-      }
-    }
   }
   else
   {
     this.invincibility_time -= dt;
   }
+}
+
+function resetCanvasDimensions()
+{
+  CANVAS_WIDTH = 0.9 * $(window).width();
+  CANVAS_HEIGHT = 0.9 * $(window).height();
+  console.log("window width:" + CANVAS_WIDTH);
+  canvas.width = CANVAS_WIDTH;
+  canvas.height = CANVAS_HEIGHT;
 }
  
 //MAIN BODY----------------------
@@ -294,7 +255,7 @@ function main() {
   socket.on("connect",
     function(){
       console.log("Connection to WebSocket server being established");
-      socket.emit("version_verification", {version: "103"});
+      socket.emit("version_verification", {version: SCRIPT_VERSION});
     }
   );
 
@@ -318,10 +279,11 @@ function main() {
 
   canvas = $(".animationCanvas").get(0);
   context = canvas.getContext("2d");
-  $(".animationCanvas").hide();
 
-  CANVAS_WIDTH = 800;//canvas.width;
-  CANVAS_HEIGHT = 400;//canvas.height;
+  resetCanvasDimensions();
+  //CANVAS_HEIGHT = 400;
+  //CANVAS_WIDTH = 800;
+
  
   me = new Player();
   KeyBulletin = new KB();
@@ -336,25 +298,48 @@ function main() {
 
 }
 
+
 function loop()
 {
   var currentTime = Date.now();
   var elapsedTime = currentTime - lastTime;
   lastTime = currentTime;
   //console.log("loop running");
-  if(numEntitiesLoading <= 0)
+  if(gameRunning)
   {
-    if(numEntitiesLoading == 0)
-    {
-      console.log("game start");
-      numEntitiesLoading = -1;
-      $(".spinner").fadeOut(500, function(){
-        $(".spinner").remove();
-        $("canvas").fadeIn(500);
-      });
-    }
     runGame(elapsedTime);
   }
+  else
+  {
+    //draw loading screen
+    if(elapsedTime === elapsedTime) //check if elapsedTime != NaN (something that is NaN is not equal to itself)
+    {
+      me.update(elapsedTime);
+    }
+
+    //draw canvas background
+    context.fillStyle = "#1ABC9C";
+    context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    context.drawImage(me.image, CANVAS_WIDTH/2 - me.width/2, CANVAS_HEIGHT/2 - me.height/2);
+    context.fillStyle = "#FFFFFF";
+    context.font = "10pt 'Open Sans'";
+    context.fillText("LOADING...", CANVAS_WIDTH/2 - 100, CANVAS_HEIGHT/2 + me.height);
+  }
+}
+
+function startGame()
+{
+  for(var keyword in entities)
+  {
+    if(entities.hasOwnProperty(keyword))
+    {
+      //reset enemies' dimensions to match with the images, which have finished loading
+      entities[keyword].proto.height = entities[keyword].proto.image.height;
+      entities[keyword].proto.width = entities[keyword].proto.image.width;
+    }
+  }
+  console.log("game start");
+  gameRunning = true;
 }
 
 function getEntities(data)
@@ -364,15 +349,24 @@ function getEntities(data)
   {
     if(entities.hasOwnProperty(keyword))
     {
-      numEntitiesLoading++;
+      numEntitiesToLoad++;
       entities[keyword].image = new Image();
       console.log("Downloading image:" + entities[keyword].imageURL);
       entities[keyword].image.onload = function()
       {
-        numEntitiesLoading--;
-        console.log("Number of downloads left:" + numEntitiesLoading);
+        numEntitiesLoaded++;
+        console.log("Finished downloading image:" + this.src);
+        console.log("Number of downloads finished:" + numEntitiesLoaded + " out of " + numEntitiesToLoad);
+        if(numEntitiesLoaded == numEntitiesToLoad)
+        {
+          startGame();
+        }
       }
       entities[keyword].image.src = "../images/" + entities[keyword].imageURL;
+      entities[keyword].proto = new Enemy(entities[keyword].image);
+      entities[keyword].proto.velocity = parseFloat(entities[keyword].velocity);
+      entities[keyword].proto.y = CANVAS_HEIGHT - parseFloat(entities[keyword].startingHeight);
+      entities[keyword].isGravityAffected = (entities[keyword].gravity == 'yes' ? true : false);
     }
   }
 }
@@ -392,35 +386,20 @@ function processTweet(data)
 
   if(me.isAlive)
   {
-    if(data.keyword == "stanford")
-    {
-      enemies.push(new Enemy(".enemy1"));
-    }
-    else if(data.keyword == "lawnmower")
-    {
-      enemies.push(new Enemy(".lawnmower"));
-      enemies[enemies.length - 1].velocity = -100;
-    }
-    else if (data.keyword == "midterm")
-    {
-      enemies.push(new Enemy(".failure"));
-    }
-    else if (data.keyword == "fox news")
-    {
-      enemies.push(new Enemy(".foxnews"));
-    }
-    else if (data.keyword == "usc")
-    {
-      trojans.push(new Trojan());
-    }
-    else if (data.keyword == "acorn")
+    if (data.keyword == "acorn")
     {
       me.lives += 1;
+    }
+    else
+    {
+      enemies.push(entities[data.keyword].proto.clone());
+      enemies[enemies.length - 1].x = CANVAS_WIDTH; //spawn at end of screen
     }
   }
 }
  
 function runGame(dt) {
+  //console.log(context);
   //get user input, update objects, display all graphics
   if (me.isAlive) {
     if (KeyBulletin.isPressed(UP)) {
@@ -452,22 +431,6 @@ function runGame(dt) {
   for (i = 0; i < enemies.length; i++) {
     if (!(enemies[i].isAlive)) {
       enemies.splice(i, 1);
-    }
-  }
-  for (i = 0; i < trojans.length; i++) {
-    trojans[i].update(dt);
-    }
-  for (i = 0; i < trojans.length; i++) {
-    if (!(trojans[i].isAlive)) {
-      trojans.splice(i, 1);
-    }
-  }
-  for (i = 0; i < bullets.length; i++) {
-    bullets[i].update(dt);
-    }
-  for (i = 0; i < bullets.length; i++) {
-    if (!(bullets[i].isAlive)) {
-      bullets.splice(i, 1);
     }
   }
   me.update(dt);
@@ -519,21 +482,16 @@ function runGame(dt) {
   else
   {
     context.drawImage(me.image, 30, me.y);
+    //console.log("me:" + me.y);
   }
   
   //display enemies
   for (i = 0; i < enemies.length; i++) {
     context.drawImage(enemies[i].image, enemies[i].x, enemies[i].y);
   }
-  for (i = 0; i < trojans.length; i++) {
-    context.drawImage(trojans[i].image, trojans[i].x, trojans[i].y);
-  }
-  for (i = 0; i < bullets.length; i++) {
-    context.drawImage(bullets[i].image, bullets[i].x, bullets[i].y);
-  }
   
-  
-  context.fillText(score, 700, 50);
+  //display score at top-right corner
+  context.fillText(score, CANVAS_WIDTH - 100, 50);
 
   if(!me.isAlive)
   {
