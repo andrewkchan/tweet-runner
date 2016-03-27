@@ -7,8 +7,6 @@ import json
 import threading
 import random
 
-import gevent
-
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = 'uploaded_assets'
 
@@ -56,7 +54,7 @@ def get_file(filename):
 
 #------------------------------------------------------------
 #Websocket messages------------------------------------------
-
+'''
 @socketio.on('my event', namespace='/test')
 def test_message(message):
     emit('my response', {'data': message['data']})
@@ -64,7 +62,7 @@ def test_message(message):
 @socketio.on('my broadcast event', namespace='/test')
 def test_message(message):
     emit('my response', {'data': message['data']}, broadcast=True)
-
+'''
 @socketio.on('connect')
 def test_connect():
     print("CLIENT CONNECTED")
@@ -115,9 +113,10 @@ class MyStreamListener(tweepy.StreamListener):
  
 myStreamListener = MyStreamListener()
 myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
-thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
-thread.start()
+
 
 if __name__=="__main__":
     #app.run(host="0.0.0.0", threaded=True)
+    thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
+    thread.start()
     socketio.run(app, host="0.0.0.0")

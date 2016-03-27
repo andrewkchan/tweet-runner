@@ -26,7 +26,7 @@ var lastTweetFavorites = 0;
 var lastTweetRetweets = 0;
 var lastTweets = [];
 var tweetTimeRemaining = 0;
-var DEFAULT_TWEET_TIME = 1500; //MILLISECONDS before fade-out
+var DEFAULT_TWEET_TIME = 3000; //MILLISECONDS before fade-out
 
 var entities;
 var numEntitiesToLoad = 0;
@@ -86,7 +86,7 @@ Animation.prototype.getCurrentFrame = function() {
 var Decoration = function(img) {
   this.image = $(img).get(0);
   this.x = CANVAS_WIDTH;
-  this.y = 320;
+  this.y = 0;
   this.isAlive = true;
   this.velocity = 0.0;
 }
@@ -170,8 +170,8 @@ var Player = function() {
   this.lives = 4;
  
   this.jumpSpeed = JUMPSPEED;
-  this.width = 60;//this.image.width;
-  this.height = 35;//this.image.height;
+  this.width = 100;//this.image.width;
+  this.height = 60;//this.image.height;
   this.y = CANVAS_HEIGHT - this.height;
 
   this.invincibility_time = DEFAULT_TWEET_TIME;
@@ -237,8 +237,8 @@ Player.prototype.update = function(dt) {
 
 function resetCanvasDimensions()
 {
-  CANVAS_WIDTH = 0.9 * $(window).width();
-  CANVAS_HEIGHT = 0.9 * $(window).height();
+  CANVAS_WIDTH = $(window).width();
+  CANVAS_HEIGHT = 0.7 * $(window).height();
   console.log("window width:" + CANVAS_WIDTH);
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
@@ -407,13 +407,14 @@ function runGame(dt) {
     }
   }
  
-  if (Math.random() < 0.008) {
+  if (Math.random() < 0.01) {
     decorations.push(new Decoration(".background_tree"));
+    decorations[decorations.length - 1].y = 0.65* CANVAS_HEIGHT;
   }
   else if (Math.random() < 0.006) {
     decorations.push(new Decoration(".cloud"));
     decorations[decorations.length - 1].velocity = 40.0;
-    decorations[decorations.length - 1].y -= 60.0 - 40.0 * (Math.random());
+    decorations[decorations.length - 1].y = 0.5* CANVAS_HEIGHT - (0.2*CANVAS_HEIGHT) * (Math.random());
   }
   for(i = 0; i < decorations.length; i++) {
     decorations[i].update(dt);
@@ -461,7 +462,8 @@ function runGame(dt) {
     context.globalAlpha = 1.0;
   }
 
-  context.fillRect(0, 340, CANVAS_WIDTH, 1);
+  //draw horizon line
+  context.fillRect(0, CANVAS_HEIGHT * 0.7, CANVAS_WIDTH, 1);
   
   for (i = 0; i < decorations.length; i++) {
     context.drawImage(decorations[i].image, decorations[i].x, decorations[i].y);
