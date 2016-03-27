@@ -104,6 +104,7 @@ def process(data):
    
 class MyStreamListener(tweepy.StreamListener):
     def on_data(self, data):
+        print("Stream listener received data, passing to process function")
         process(json.loads(data))
         return True
  
