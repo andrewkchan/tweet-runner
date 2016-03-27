@@ -15,9 +15,9 @@ var retweet_image;
 var UP = 38;
 var CANVAS_WIDTH = 0;
 var CANVAS_HEIGHT = 0;
-var GRAVITY = 900;
+var GRAVITY = 950;
 var GROUNDSPEED = -150;
-var JUMPSPEED = -550;
+var JUMPSPEED = -600;
 
 
 var lastTweetAuthor;

@@ -108,7 +108,7 @@ class MyStreamListener(tweepy.StreamListener):
         return True
  
     def on_error(self, status):
-        print(status)
+        print("STREAM LISTENER ERROR:" + status)
         use_other_keys()
  
 myStreamListener = MyStreamListener()
