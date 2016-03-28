@@ -6,6 +6,7 @@ var enemies = [];
 var decorations = [];
 var me;
 var KeyBulletin;
+var mouseWasClicked = false;
 
 var score = 0;
 
@@ -16,8 +17,8 @@ var UP = 38;
 var CANVAS_WIDTH = 0;
 var CANVAS_HEIGHT = 0;
 var GRAVITY = 1000;
-var GROUNDSPEED = -150;
-var JUMPSPEED = -650;
+var GROUNDSPEED = -160;
+var JUMPSPEED = -720;
 
 
 var lastTweetAuthor;
@@ -291,6 +292,7 @@ function main() {
 
   window.addEventListener('keyup', function(event) {KeyBulletin.onKeyUp(event);}, false);
   window.addEventListener('keydown', function(event) {KeyBulletin.onKeyDown(event);}, false);
+  window.addEventListener('click', function(event) {mouseWasClicked = true;}, false);
 
   setInterval(loop, 25);
 
@@ -400,7 +402,7 @@ function runGame(dt) {
   //console.log(context);
   //get user input, update objects, display all graphics
   if (me.isAlive) {
-    if (KeyBulletin.isPressed(UP)) {
+    if (KeyBulletin.isPressed(UP) || mouseWasClicked) {
       if (me.isOnGround()) {
         me.velocity = me.jumpSpeed;
       }
@@ -498,4 +500,6 @@ function runGame(dt) {
     context.font = "bold 30pt 'Open Sans'";
     context.fillText("u ded", 10, 60);
   }
+
+  mouseWasClicked = false;
 }
