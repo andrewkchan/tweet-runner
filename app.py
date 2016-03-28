@@ -7,6 +7,9 @@ import json
 import threading
 import random
 
+import gevent
+import signal
+
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = 'uploaded_assets'
 
@@ -23,15 +26,12 @@ def use_other_keys():
     consumer_secret = "SxvXVyQAHIgwjjcTcC9BDgYHppZmc4qiYCkwwBg9jf9Whe916g"
     access_token = "4065144794-pqAghjRqGZRT4ETGcGjxj4OUc9rwtx772aSANqp"
     access_token_secret = "UBXUjvm8rkepFkrJZZUQyVH8grUYK5cKnp5olpsVWSiC2"
- 
+'''
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
  
 api = tweepy.API(auth)
- 
-json_cache = []
-last = ['']
-
+'''
 keywords = ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc']
 
 entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
@@ -87,9 +87,8 @@ def process(data):
     for k in keywords:
         if k in data['text'].lower():
             keyword = k
-    if not keyword or data['user']['lang'] != 'en' or last[0] == data['text']:
+    if not keyword or data['user']['lang'] != 'en':
         return
-    last[0] = data['text']
     tweet = {'name': data['user']['screen_name'], 
             'text': data['text'], 
             'url': 'https://twitter.com/statuses/' + str(data['id']), 
@@ -103,21 +102,46 @@ def process(data):
     socketio.emit('new_tweet', tweet)
    
 class MyStreamListener(tweepy.StreamListener):
+    def __init__(self):
+        self.sockets = []
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        self.stream = tweepy.Stream(auth=auth, listener=self)
+
+    def run(self):
+        try:
+            self.stream.filter(track=keywords)
+        except Exception as error:
+            print("Exception encountered: {} - Stream disconnected!".format(error))
+            self.stream.disconnect()
+
+    def start(self):
+        #gevent.spawn(self.run)
+        thread = threading.Thread(target=self.run)
+        thread.start()
+
     def on_data(self, data):
         print("Stream listener received data, passing to process function")
         process(json.loads(data))
         return True
  
     def on_error(self, status):
-        print("STREAM LISTENER ERROR:" + status)
+        print("STREAM LISTENER ERROR:{}".format(status))
         use_other_keys()
+
+    def on_timeout(self):
+        print("STREAM LISTENER:tweepy timeout.. sleeping 30 seconds")
+        gevent.sleep(30)
  
+'''
 myStreamListener = MyStreamListener()
 myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
-
+'''
 
 if __name__=="__main__":
     #app.run(host="0.0.0.0", threaded=True)
-    thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
-    thread.start()
+    streamListener = MyStreamListener()
+    streamListener.start()
+    #thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
+    #thread.start()
     socketio.run(app, host="0.0.0.0")

@@ -1,4 +1,4 @@
-var SCRIPT_VERSION = "105";
+var SCRIPT_VERSION = "106";
 
 var canvas;
 var context;
@@ -15,9 +15,9 @@ var retweet_image;
 var UP = 38;
 var CANVAS_WIDTH = 0;
 var CANVAS_HEIGHT = 0;
-var GRAVITY = 950;
+var GRAVITY = 1000;
 var GROUNDSPEED = -150;
-var JUMPSPEED = -600;
+var JUMPSPEED = -650;
 
 
 var lastTweetAuthor;
