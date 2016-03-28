@@ -1,4 +1,4 @@
-var SCRIPT_VERSION = "106";
+var SCRIPT_VERSION = "107";
 
 var canvas;
 var context;
@@ -18,7 +18,7 @@ var CANVAS_WIDTH = 0;
 var CANVAS_HEIGHT = 0;
 var GRAVITY = 1000;
 var GROUNDSPEED = -160;
-var JUMPSPEED = -720;
+var JUMPSPEED = -800;
 
 
 var lastTweetAuthor;
@@ -294,7 +294,7 @@ function main() {
   window.addEventListener('keydown', function(event) {KeyBulletin.onKeyDown(event);}, false);
   window.addEventListener('click', function(event) {mouseWasClicked = true;}, false);
 
-  setInterval(loop, 25);
+  setInterval(loop, 20);
 
 }
 
