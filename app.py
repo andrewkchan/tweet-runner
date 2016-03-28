@@ -39,48 +39,6 @@ entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png', 'velocity': 
             'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png', 'velocity': '-100', 'gravity': 'no', 'startingHeight': '0'}, 
             'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
             'usc': {'type': 'enemy', 'imageURL': 'trojan.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}}
-
-
-#Routes----------------------------------------------------
-
-@app.route("/")
-def index():
-    #return get_tweets()
-    return render_template("index.html")
-
-@app.route("/images/<filename>")
-def get_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-#------------------------------------------------------------
-#Websocket messages------------------------------------------
-'''
-@socketio.on('my event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']})
-
-@socketio.on('my broadcast event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']}, broadcast=True)
-'''
-@socketio.on('connect')
-def test_connect():
-    print("CLIENT CONNECTED")
-    emit('transmit_entities', entities)
-
-@socketio.on("version_verification")
-def print_client_version(message):
-    print("client version:" + message["version"])
-
-@socketio.on('disconnect')
-def test_disconnect():
-    print('CLIENT DISCONNECTED')
-
-@socketio.on("entites_received")
-def entities_received():
-    print("CLIENT RECEIVED ENTITIES")
-
-#------------------------------------------------------------
  
 def process(data):
     keyword = False
@@ -107,6 +65,7 @@ class MyStreamListener(tweepy.StreamListener):
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         auth.set_access_token(access_token, access_token_secret)
         self.stream = tweepy.Stream(auth=auth, listener=self)
+        self.is_running = False
 
     def run(self):
         try:
@@ -114,11 +73,13 @@ class MyStreamListener(tweepy.StreamListener):
         except Exception as error:
             print("Exception encountered: {} - Stream disconnected!".format(error))
             self.stream.disconnect()
+            self.is_running = False
 
     def start(self):
         #gevent.spawn(self.run)
         thread = threading.Thread(target=self.run)
         thread.start()
+        self.is_running = True
 
     def on_data(self, data):
         print("Stream listener received data, passing to process function")
@@ -132,15 +93,60 @@ class MyStreamListener(tweepy.StreamListener):
     def on_timeout(self):
         print("STREAM LISTENER:tweepy timeout.. sleeping 30 seconds")
         gevent.sleep(30)
+
+
+streamListener = MyStreamListener()
  
 '''
 myStreamListener = MyStreamListener()
 myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
 '''
 
+#Routes----------------------------------------------------
+
+@app.route("/")
+def index():
+    #return get_tweets()
+    return render_template("index.html")
+
+@app.route("/images/<filename>")
+def get_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+#------------------------------------------------------------
+#Websocket messages------------------------------------------
+'''
+@socketio.on('my event', namespace='/test')
+def test_message(message):
+    emit('my response', {'data': message['data']})
+
+@socketio.on('my broadcast event', namespace='/test')
+def test_message(message):
+    emit('my response', {'data': message['data']}, broadcast=True)
+'''
+@socketio.on('connect')
+def test_connect():
+    print("CLIENT CONNECTED")
+    if not streamListener.is_running:
+        streamListener.start()
+    emit('transmit_entities', entities)
+
+@socketio.on("version_verification")
+def print_client_version(message):
+    print("client version:" + message["version"])
+
+@socketio.on('disconnect')
+def test_disconnect():
+    print('CLIENT DISCONNECTED')
+
+@socketio.on("entites_received")
+def entities_received():
+    print("CLIENT RECEIVED ENTITIES")
+
+#------------------------------------------------------------
+
 if __name__=="__main__":
     #app.run(host="0.0.0.0", threaded=True)
-    streamListener = MyStreamListener()
     streamListener.start()
     #thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
     #thread.start()
