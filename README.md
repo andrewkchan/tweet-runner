@@ -6,6 +6,8 @@ Demo here:
 
 <http://spooky-broomstick-5831.herokuapp.com/>
 
+Note: Twitter changed their API recently so the server may or may not be broken.
+
 ## Developers
 
 **Andrew Chan**
