@@ -50,17 +50,16 @@ def entities_received():
 
 #------------------------------------------------------------
 
-if __name__=="__main__":
-    config = {
-        "consumer_key": consumer_key,
-        "consumer_secret": consumer_secret,
-        "access_token": access_token,
-        "access_token_secret": access_token_secret,
-        "keywords": ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc'],
-        "languages": ["en"]
-    }
-    print(config)
-    streamWorker = StreamWorker(config, socketio)
-    main_thread = threading.Thread(target=streamWorker.run)
-    main_thread.start()
-    socketio.run(app, host="0.0.0.0")
+
+config = {
+    "consumer_key": consumer_key,
+    "consumer_secret": consumer_secret,
+    "access_token": access_token,
+    "access_token_secret": access_token_secret,
+    "keywords": ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc'],
+    "languages": ["en"]
+}
+streamWorker = StreamWorker(config, socketio)
+main_thread = threading.Thread(target=streamWorker.run)
+main_thread.start()
+socketio.run(app, host="0.0.0.0")
