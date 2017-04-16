@@ -1,6 +1,10 @@
 from twitter import Api
 
 class StreamWorker:
+    config = {}
+    api = None
+    socketio = None
+    
     def __init__(self, config, socketio):
         self.config = config
         self.api = Api(

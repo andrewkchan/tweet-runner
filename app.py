@@ -62,4 +62,4 @@ config = {
 streamWorker = StreamWorker(config, socketio)
 main_thread = threading.Thread(target=streamWorker.run)
 main_thread.start()
-socketio.run(app, host="0.0.0.0")
+socketio.run(app, host="0.0.0.0", port=8080)
