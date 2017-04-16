@@ -34,8 +34,6 @@ def get_file(filename):
 @socketio.on('connect')
 def test_connect():
     print("CLIENT CONNECTED")
-    if not streamListener.is_running:
-        streamListener.start()
     emit('transmit_entities', entities)
 
 @socketio.on("version_verification")
