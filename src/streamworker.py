@@ -4,7 +4,7 @@ class StreamWorker:
     config = {}
     api = None
     socketio = None
-    
+
     def __init__(self, config, socketio):
         self.config = config
         self.api = Api(
@@ -17,6 +17,7 @@ class StreamWorker:
     def run(self):
         for data in self.api.GetStreamFilter(track=self.config["keywords"], languages=self.config["languages"]):
             self.process(data)
+            yield
     def process(self, data):
         keyword = None
         for k in self.config["keywords"]:
