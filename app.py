@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask.ext.socketio import SocketIO, emit
 
 import json
-import threading
+import gevent
 from config import *
 from src.streamworker import StreamWorker
 
