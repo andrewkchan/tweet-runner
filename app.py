@@ -3,6 +3,7 @@ from flask.ext.socketio import SocketIO, emit
 
 import json
 import gevent
+import threading
 from config import *
 from src.streamworker import StreamWorker
 
@@ -60,5 +61,6 @@ config = {
     "languages": ["en"]
 }
 streamWorker = StreamWorker(config, socketio)
-main = gevent.spawn(streamWorker.run)
-socketio.run(app, host="0.0.0.0", port=8080)
+main = threading.Thread(target=streamWorker.run)
+main.start()
+#socketio.run(app, host="0.0.0.0", port=8080)
