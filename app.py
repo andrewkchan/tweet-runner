@@ -1,106 +1,22 @@
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask.ext.socketio import SocketIO, emit
 
-import tweepy
-import time
 import json
 import threading
-import random
-
-import gevent
-import signal
+from config import *
+from src.streamworker import StreamWorker
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = 'uploaded_assets'
-
 socketio = SocketIO(app)
- 
-consumer_key = 'Otz5rylmpLoBFBbjAiLgTay1J'
-consumer_secret = 'vDmqWCcCaqrybtkho6hehZJLQkTdiFvHvBSLm5TgsrtMq49RYK'
-access_token = '4074485474-giyYlpDuuIwyB690amWHIkAyij0WHAhfvr0O54b'
-access_token_secret = 'hDESXlh1qUwFifGYv2ukfhVaYRWNE7zHrb4jSKZXFUiRJ'
 
-def use_other_keys():
-    global consumer_key, consumer_secret, access_token, access_token_secret
-    consumer_key = "Fss3DMcf9sw7lkaddUGlo8sN2"
-    consumer_secret = "SxvXVyQAHIgwjjcTcC9BDgYHppZmc4qiYCkwwBg9jf9Whe916g"
-    access_token = "4065144794-pqAghjRqGZRT4ETGcGjxj4OUc9rwtx772aSANqp"
-    access_token_secret = "UBXUjvm8rkepFkrJZZUQyVH8grUYK5cKnp5olpsVWSiC2"
-'''
-auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
- 
-api = tweepy.API(auth)
-'''
-keywords = ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc']
 
-entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
-            'midterm': {'type': 'enemy', 'imageURL': 'failure.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'},  
-            'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png', 'velocity': '-100', 'gravity': 'no', 'startingHeight': '0'}, 
-            'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}, 
+entities = {'stanford': {'type': 'enemy', 'imageURL': 'enemy1.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'},
+            'midterm': {'type': 'enemy', 'imageURL': 'failure.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'},
+            'lawnmower': {'type': 'enemy', 'imageURL': 'lawnmower.png', 'velocity': '-100', 'gravity': 'no', 'startingHeight': '0'},
+            'fox news': {'type': 'enemy', 'imageURL': 'foxnews.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'},
             'usc': {'type': 'enemy', 'imageURL': 'trojan.png', 'velocity': '0', 'gravity': 'no', 'startingHeight': '0'}}
- 
-def process(data):
-    keyword = False
-    for k in keywords:
-        if k in data['text'].lower():
-            keyword = k
-    if not keyword or data['user']['lang'] != 'en':
-        return
-    tweet = {'name': data['user']['screen_name'], 
-            'text': data['text'], 
-            'url': 'https://twitter.com/statuses/' + str(data['id']), 
-            'time': data['created_at'], 
-            'favorites': data['favorite_count'], 
-            'retweets': data['retweet_count'], 
-            'keyword': keyword}
-    print(tweet['time'])
-    print('@%s: %s' % (data['user']['screen_name'], data['text'].encode('ascii', 'ignore')))
-    #broadcast the tweet to all connected clients
-    socketio.emit('new_tweet', tweet)
-   
-class MyStreamListener(tweepy.StreamListener):
-    def __init__(self):
-        self.sockets = []
-        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-        auth.set_access_token(access_token, access_token_secret)
-        self.stream = tweepy.Stream(auth=auth, listener=self)
-        self.is_running = False
 
-    def run(self):
-        try:
-            self.stream.filter(track=keywords)
-        except Exception as error:
-            print("Exception encountered: {} - Stream disconnected!".format(error))
-            self.stream.disconnect()
-            self.is_running = False
-
-    def start(self):
-        #gevent.spawn(self.run)
-        thread = threading.Thread(target=self.run)
-        thread.start()
-        self.is_running = True
-
-    def on_data(self, data):
-        print("Stream listener received data, passing to process function")
-        process(json.loads(data))
-        return True
- 
-    def on_error(self, status):
-        print("STREAM LISTENER ERROR:{}".format(status))
-        use_other_keys()
-
-    def on_timeout(self):
-        print("STREAM LISTENER:tweepy timeout.. sleeping 30 seconds")
-        gevent.sleep(30)
-
-
-streamListener = MyStreamListener()
- 
-'''
-myStreamListener = MyStreamListener()
-myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
-'''
 
 #Routes----------------------------------------------------
 
@@ -115,15 +31,6 @@ def get_file(filename):
 
 #------------------------------------------------------------
 #Websocket messages------------------------------------------
-'''
-@socketio.on('my event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']})
-
-@socketio.on('my broadcast event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']}, broadcast=True)
-'''
 @socketio.on('connect')
 def test_connect():
     print("CLIENT CONNECTED")
@@ -146,8 +53,16 @@ def entities_received():
 #------------------------------------------------------------
 
 if __name__=="__main__":
-    #app.run(host="0.0.0.0", threaded=True)
-    streamListener.start()
-    #thread = threading.Thread(target=myStream.filter, kwargs={'track': keywords})
-    #thread.start()
+    config = {
+        "consumer_key": consumer_key,
+        "consumer_secret": consumer_secret,
+        "access_token": access_token,
+        "access_token_secret": access_token_secret,
+        "keywords": ['acorn', 'stanford', 'midterm', 'lawnmower', 'fox news', 'usc'],
+        "languages": ["en"]
+    }
+    print(config)
+    streamWorker = StreamWorker(config, socketio)
+    main_thread = threading.Thread(target=streamWorker.run)
+    main_thread.start()
     socketio.run(app, host="0.0.0.0")

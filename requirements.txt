@@ -1,5 +1,7 @@
+appdirs==1.4.3
 Flask==0.10.1
 Flask-SocketIO==2.2
+future==0.16.0
 gevent==1.1.0
 greenlet==0.4.9
 gunicorn==18.0
@@ -7,10 +9,12 @@ itsdangerous==0.24
 Jinja2==2.8
 MarkupSafe==0.23
 oauthlib==1.0.3
+packaging==16.8
+pyparsing==2.2.0
 python-engineio==0.9.0
 python-socketio==1.1
+python-twitter==3.2.1
 requests==2.8.1
 requests-oauthlib==0.5.0
 six==1.10.0
-tweepy==3.5.0
 Werkzeug==0.10.4
