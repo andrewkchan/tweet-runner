@@ -60,6 +60,5 @@ config = {
     "languages": ["en"]
 }
 streamWorker = StreamWorker(config, socketio)
-main_thread = threading.Thread(target=streamWorker.run)
-main_thread.start()
+main = gevent.spawn(streamWorker.run)
 socketio.run(app, host="0.0.0.0", port=8080)
